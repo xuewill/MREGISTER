@@ -425,14 +425,14 @@
                   <span>{{ t.task_filter_status }}</span>
                   <select id="task-filter-status">
                     <option value="all">{{ t.task_filter_all }}</option>
-                    <option value="queued">queued</option>
-                    <option value="running">running</option>
-                    <option value="stopping">stopping</option>
-                    <option value="completed">completed</option>
-                    <option value="partial">partial</option>
-                    <option value="failed">failed</option>
-                    <option value="stopped">stopped</option>
-                    <option value="interrupted">interrupted</option>
+                    <option value="queued">{{ t.status_queued }}</option>
+                    <option value="running">{{ t.status_running }}</option>
+                    <option value="stopping">{{ t.status_stopping }}</option>
+                    <option value="completed">{{ t.status_completed }}</option>
+                    <option value="partial">{{ t.status_partial }}</option>
+                    <option value="failed">{{ t.status_failed }}</option>
+                    <option value="stopped">{{ t.status_stopped }}</option>
+                    <option value="interrupted">{{ t.status_interrupted }}</option>
                   </select>
                 </label>
               </div>
@@ -711,7 +711,7 @@ Authorization: Bearer YOUR_API_KEY</pre>
 
   <div id="action-modal" class="modal-shell" hidden>
     <div class="modal-backdrop" data-modal-close></div>
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="action-modal-title">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="action-modal-title" tabindex="-1">
       <h3 id="action-modal-title"></h3>
       <p id="action-modal-message" class="subtle"></p>
       <div class="modal-actions">

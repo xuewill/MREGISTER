@@ -26,6 +26,7 @@ const actionModalTitle = document.getElementById('action-modal-title');
 const actionModalMessage = document.getElementById('action-modal-message');
 const actionModalConfirm = document.getElementById('action-modal-confirm');
 const actionModalCancel = document.getElementById('action-modal-cancel');
+const actionModalCard = actionModal ? actionModal.querySelector('.modal-card') : null;
 const SIDEBAR_STORAGE_KEY = 'mregister-sidebar-collapsed';
 let actionModalResolver = null;
 
@@ -181,13 +182,14 @@ function getSubmitButton(form, submitter = null) {
   if (submitter instanceof HTMLButtonElement) {
     return submitter;
   }
-  return form.querySelector('button[type="submit"]');
+  return form.querySelector('button[type="submit"], button:not([type]), input[type="submit"]');
 }
 
 function closeActionModal(result = false) {
   if (!actionModal || actionModal.hidden) {
     return;
   }
+  actionModal.classList.remove('is-open');
   actionModal.hidden = true;
   document.body.style.overflow = '';
   const resolve = actionModalResolver;
@@ -210,7 +212,11 @@ function openActionModal({ title, message, confirmLabel, cancelLabel }) {
   actionModalCancel.textContent = cancelLabel;
   actionModal.hidden = false;
   document.body.style.overflow = 'hidden';
-  requestAnimationFrame(() => actionModalConfirm.focus());
+  requestAnimationFrame(() => {
+    actionModal.classList.add('is-open');
+    (actionModalCard || actionModalConfirm).focus();
+    actionModalConfirm.focus();
+  });
   return new Promise((resolve) => {
     actionModalResolver = resolve;
   });
@@ -454,14 +460,23 @@ function getFilteredTasks() {
   return state.tasks.filter((task) => task.status === state.taskFilterStatus);
 }
 
-function renderTasksSidebar() {
+function resolveVisibleTask(tasks) {
+  return tasks.find((item) => item.id === state.selectedTaskId) || tasks[0] || null;
+}
+
+function renderTasksSidebar(activeTaskId = state.selectedTaskId) {
   const wrap = document.getElementById('task-list');
   const tasks = getFilteredTasks();
   wrap.innerHTML = tasks.length ? tasks.map((task) => `
-    <button class="task-side-item ${state.selectedTaskId === task.id ? 'selected' : ''}" data-id="${task.id}">
-      <strong>${task.name}</strong>
-      <span>${task.results_count}/${task.quantity}</span>
-      <span>${statusLabel(task.status)}</span>
+    <button class="task-side-item ${activeTaskId === task.id ? 'selected' : ''}" data-id="${task.id}">
+      <div class="task-side-item__top">
+        <strong class="task-side-item__name">${task.name}</strong>
+        <span class="task-side-item__id">#${task.id}</span>
+      </div>
+      <div class="task-side-item__meta">
+        <span class="task-side-item__count">${task.results_count}/${task.quantity}</span>
+        <span class="status-pill status-pill--${task.status}">${statusLabel(task.status)}</span>
+      </div>
     </button>
   `).join('') : `<p class="empty">${tr('empty_filtered_tasks')}</p>`;
 
@@ -474,15 +489,15 @@ function renderTasksSidebar() {
 }
 
 function renderTaskDetail() {
-  renderTasksSidebar();
-
   const header = document.getElementById('task-detail-header');
   const actions = document.getElementById('task-detail-actions');
   const consoleBox = document.getElementById('task-console');
   const tasks = getFilteredTasks();
-  const task = tasks.find((item) => item.id === state.selectedTaskId) || tasks[0] || null;
+  const task = resolveVisibleTask(tasks);
 
   if (!task) {
+    state.selectedTaskId = null;
+    renderTasksSidebar();
     header.innerHTML = `<h3>${tr('task_detail_empty_title')}</h3><p class="meta">${tr('task_detail_empty_desc')}</p>`;
     actions.innerHTML = '';
     consoleBox.textContent = tr('console_wait');
@@ -490,6 +505,7 @@ function renderTaskDetail() {
   }
 
   state.selectedTaskId = task.id;
+  renderTasksSidebar(task.id);
   header.innerHTML = `
     <div>
       <h3>${task.name} (#${task.id})</h3>
@@ -658,6 +674,10 @@ async function refreshState() {
 
   if (!state.tasks.some((task) => task.id === state.selectedTaskId)) {
     state.selectedTaskId = state.tasks[0]?.id || null;
+  }
+
+  if (taskFilterStatus) {
+    taskFilterStatus.value = state.taskFilterStatus;
   }
 
   populateSelectors();
