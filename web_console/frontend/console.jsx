@@ -311,6 +311,37 @@ Authorization: Bearer YOUR_API_KEY`,
 }
 
 export function ConsoleApp() {
+  const COUNTRY_PRESETS = [
+    ['US', tr('preset_country_us')],
+    ['SG', tr('preset_country_sg')],
+    ['JP', tr('preset_country_jp')],
+    ['GB', tr('preset_country_uk')],
+    ['AU', tr('preset_country_au')],
+    ['HK', tr('preset_country_hk')],
+  ];
+  const REGION_PRESETS = [
+    ['United States', tr('preset_region_us')],
+    ['Singapore', tr('preset_region_sg')],
+    ['Japan', tr('preset_region_jp')],
+    ['United Kingdom', tr('preset_region_uk')],
+    ['Australia', tr('preset_region_au')],
+    ['Hong Kong', tr('preset_region_hk')],
+  ];
+  const PROTOCOL_PRESETS = [
+    ['HTTPS', tr('preset_protocol_https')],
+    ['SOCKS4', tr('preset_protocol_socks4')],
+    ['SOCKS5', tr('preset_protocol_socks5')],
+  ];
+  const ANONYMITY_PRESETS = [
+    ['Elite', tr('preset_anonymity_elite')],
+    ['Anonymous', tr('preset_anonymity_anonymous')],
+    ['Transparent', tr('preset_anonymity_transparent')],
+  ];
+  const SORT_PRESETS = [
+    ['-speed', tr('preset_sort_speed_desc')],
+    ['-uptime', tr('preset_sort_uptime_desc')],
+    ['-last_checked', tr('preset_sort_checked_desc')],
+  ];
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -338,6 +369,7 @@ export function ConsoleApp() {
     default_gptmail_credential_id: '',
     default_yescaptcha_credential_id: '',
     default_proxy_id: '',
+    default_proxy_provider_key: '',
   });
   const [credentialDraft, setCredentialDraft] = useState({
     name: '',
@@ -359,7 +391,7 @@ export function ConsoleApp() {
   const [proxyGroupDraft, setProxyGroupDraft] = useState({ name: '', notes: '' });
   const [selectedPoolIds, setSelectedPoolIds] = useState([]);
   const [selectedProxyGroupId, setSelectedProxyGroupId] = useState('');
-  const [proxyPoolTab, setProxyPoolTab] = useState('providers');
+  const [proxyPoolTab, setProxyPoolTab] = useState('home');
   const [proxyPoolFilters, setProxyPoolFilters] = useState({ keyword: '', protocol: '', country: '', source: '', workingOnly: false });
   const [activeProxyGroupId, setActiveProxyGroupId] = useState(null);
   const [groupOrderDraft, setGroupOrderDraft] = useState([]);
@@ -391,6 +423,7 @@ export function ConsoleApp() {
   const visibleTask = filteredTasks.find((item) => item.id === selectedTaskId) || filteredTasks[0] || null;
   const currentPlatformSpec = statePayload.platforms[taskDraft.platform] || {};
   const activeProxyGroup = statePayload.proxy_groups.find((item) => item.id === activeProxyGroupId) || null;
+  const proxyPoolSummary = statePayload.proxy_pool_summary || {};
   const currentSectionLabel = tr(NAV_ITEMS.find(([sectionId]) => sectionId === activeSection)?.[1] || 'nav_dashboard');
   const logoutLabel = tr('nav_logout');
 
@@ -451,11 +484,13 @@ export function ConsoleApp() {
       default_gptmail_credential_id: payload.defaults.default_gptmail_credential_id ? String(payload.defaults.default_gptmail_credential_id) : '',
       default_yescaptcha_credential_id: payload.defaults.default_yescaptcha_credential_id ? String(payload.defaults.default_yescaptcha_credential_id) : '',
       default_proxy_id: payload.defaults.default_proxy_id ? String(payload.defaults.default_proxy_id) : '',
+      default_proxy_provider_key: payload.defaults.default_proxy_provider_key || '',
     });
     setProviderDrafts(() => Object.fromEntries((payload.proxy_provider_settings || []).map((item) => [item.provider_key, {
       provider_key: item.provider_key,
       enabled: item.enabled !== false,
       api_token: item.api_token || '',
+      auto_sync: item.config?.auto_sync === true,
       country: item.config?.country || '',
       region: item.config?.region || '',
       protocol: item.config?.protocol || '',
@@ -547,6 +582,7 @@ export function ConsoleApp() {
           default_gptmail_credential_id: parseIntOrNull(defaultsDraft.default_gptmail_credential_id),
           default_yescaptcha_credential_id: parseIntOrNull(defaultsDraft.default_yescaptcha_credential_id),
           default_proxy_id: parseIntOrNull(defaultsDraft.default_proxy_id),
+          default_proxy_provider_key: defaultsDraft.default_proxy_provider_key || null,
         }),
       });
       await refreshState();
@@ -604,6 +640,7 @@ export function ConsoleApp() {
           min_speed: draft.min_speed === '' ? null : Number(draft.min_speed),
           min_uptime: draft.min_uptime === '' ? null : Number(draft.min_uptime),
           per_page: Number(draft.per_page || 50),
+          auto_sync: draft.auto_sync === true,
           api_token: draft.api_token || null,
           country: draft.country || null,
           region: draft.region || null,
@@ -624,6 +661,13 @@ export function ConsoleApp() {
       });
       await refreshState();
       window.alert(tr('proxy_pool_sync_done', { count: result.imported || 0 }));
+    });
+  }
+
+  async function handlePruneInvalidPool() {
+    await withBusy('proxy-pool-prune', async () => {
+      await api('/api/proxy-pool/prune-invalid', { method: 'POST' });
+      await refreshState();
     });
   }
 
@@ -1256,14 +1300,50 @@ export function ConsoleApp() {
         <div className="section-head">
           <div>
             <p className="eyebrow">{tr('nav_proxy_pool')}</p>
-            <h2>{tr('section_proxy_pool')}</h2>
+            <h2>{tr('proxy_pool_detail_title')}</h2>
           </div>
         </div>
         <div className="subnav-tabs">
-          <button type="button" className={`subnav-tab ${proxyPoolTab === 'providers' ? 'active' : ''}`.trim()} onClick={() => setProxyPoolTab('providers')}>{tr('proxy_pool_provider_title')}</button>
+          <button type="button" className={`subnav-tab ${proxyPoolTab === 'home' ? 'active' : ''}`.trim()} onClick={() => setProxyPoolTab('home')}>{'主页'}</button>
           <button type="button" className={`subnav-tab ${proxyPoolTab === 'pool' ? 'active' : ''}`.trim()} onClick={() => setProxyPoolTab('pool')}>{tr('proxy_pool_list_title')}</button>
           <button type="button" className={`subnav-tab ${proxyPoolTab === 'groups' ? 'active' : ''}`.trim()} onClick={() => setProxyPoolTab('groups')}>{tr('proxy_groups_title')}</button>
+          <button type="button" className={`subnav-tab ${proxyPoolTab === 'providers' ? 'active' : ''}`.trim()} onClick={() => setProxyPoolTab('providers')}>{tr('proxy_pool_provider_title')}</button>
         </div>
+        {proxyPoolTab === 'home' ? (
+          <div className="grid-two">
+            <article className="panel">
+              <div className="panel-head"><div><h3>{'当前可用代理数'}</h3><span>{'代理池总览'}</span></div></div>
+              <div className="metric-grid">
+                <article className="metric-card"><strong>{proxyPoolSummary.available_count || 0}</strong><span>{'可用代理'}</span></article>
+                <article className="metric-card"><strong>{proxyPoolSummary.invalid_count || 0}</strong><span>{'不可用代理'}</span></article>
+              </div>
+            </article>
+            <article className="panel">
+              <div className="panel-head"><div><h3>{'默认代理来源'}</h3><span>{'默认与自动更新控制'}</span></div></div>
+              <form className="stack" onSubmit={handleDefaultsSubmit}>
+                <label className="field-card">
+                  <span>{'默认代理来源'}</span>
+                  <select value={defaultsDraft.default_proxy_provider_key} onChange={(event) => setDefaultsDraft((current) => ({ ...current, default_proxy_provider_key: event.target.value }))}>
+                    <option value="">{'默认手动代理'}</option>
+                    <option value="proxy-free.com">{'Proxy-Free API'}</option>
+                  </select>
+                </label>
+                <label className="field-card">
+                  <span>{tr('default_proxy')}</span>
+                  <select value={defaultsDraft.default_proxy_id} onChange={(event) => setDefaultsDraft((current) => ({ ...current, default_proxy_id: event.target.value }))}>
+                    <option value="">{tr('no_default_proxy')}</option>
+                    {statePayload.proxies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                </label>
+                <p className="field-tip field-tip--soft">{`自动更新状态：${proxyPoolSummary.auto_sync_enabled ? '已启用' : '未启用'}`}</p>
+                <div className="form-actions">
+                  <BusyButton type="submit" busy={isBusy('defaults-save')}>{tr('save_defaults')}</BusyButton>
+                  <BusyButton type="button" busy={isBusy('proxy-pool-prune')} onClick={handlePruneInvalidPool}>{'一键剔除不可用代理'}</BusyButton>
+                </div>
+              </form>
+            </article>
+          </div>
+        ) : null}
         {proxyPoolTab === 'providers' ? (
           <div className="grid-two">
             {providerItems.map((item) => {
@@ -1282,22 +1362,32 @@ export function ConsoleApp() {
                       <input type="checkbox" checked={draft.enabled !== false} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, enabled: event.target.checked } }))} />
                       <span>{tr('enable')}</span>
                     </label>
+                    <label className="field-card field-card--checkbox">
+                      <input type="checkbox" checked={draft.auto_sync === true} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, auto_sync: event.target.checked } }))} />
+                      <span>{'自动更新'}</span>
+                    </label>
                     {item.provider_key === 'proxy-free.com' ? (
-                      <label className="field-card">
-                        <span>{tr('field_provider_token')}</span>
-                        <input value={draft.api_token || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, api_token: event.target.value } }))} />
-                      </label>
-                    ) : null}
+                      <>
+                        <p className="field-tip field-tip--soft">{tr('provider_proxyfree_hint')}</p>
+                        <label className="field-card">
+                          <span>{tr('field_provider_token')}</span>
+                          <input value={draft.api_token || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, api_token: event.target.value } }))} />
+                        </label>
+                      </>
+                    ) : (
+                      <p className="field-tip field-tip--soft">{tr('provider_openproxylist_hint')}</p>
+                    )}
                     <div className="grid-two compact-grid">
-                      <label className="field-card"><span>{tr('field_country')}</span><input value={draft.country || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, country: event.target.value } }))} /></label>
-                      <label className="field-card"><span>{tr('field_region')}</span><input value={draft.region || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, region: event.target.value } }))} /></label>
-                      <label className="field-card"><span>{tr('field_protocol')}</span><input value={draft.protocol || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, protocol: event.target.value } }))} /></label>
-                      <label className="field-card"><span>{tr('field_anonymity')}</span><input value={draft.anonymity || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, anonymity: event.target.value } }))} /></label>
+                      <label className="field-card"><span>{tr('field_country')}</span><select value={draft.country || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, country: event.target.value } }))}><option value="">All</option>{COUNTRY_PRESETS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                      <label className="field-card"><span>{tr('field_region')}</span><select value={draft.region || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, region: event.target.value } }))}><option value="">All</option>{REGION_PRESETS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                      <label className="field-card"><span>{tr('field_protocol')}</span><select value={draft.protocol || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, protocol: event.target.value } }))}><option value="">All</option>{PROTOCOL_PRESETS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                      <label className="field-card"><span>{tr('field_anonymity')}</span><select value={draft.anonymity || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, anonymity: event.target.value } }))}><option value="">All</option>{ANONYMITY_PRESETS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                       <label className="field-card"><span>{tr('field_min_speed')}</span><input type="number" value={draft.min_speed ?? ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, min_speed: event.target.value } }))} /></label>
                       <label className="field-card"><span>{tr('field_min_uptime')}</span><input type="number" value={draft.min_uptime ?? ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, min_uptime: event.target.value } }))} /></label>
-                      <label className="field-card"><span>{tr('field_sort_by')}</span><input value={draft.sort_by || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, sort_by: event.target.value } }))} /></label>
+                      <label className="field-card"><span>{tr('field_sort_by')}</span><select value={draft.sort_by || ''} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, sort_by: event.target.value } }))}><option value="">Default</option>{SORT_PRESETS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                       <label className="field-card"><span>Per Page</span><input type="number" min="1" max="100" value={draft.per_page || 50} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, per_page: event.target.value } }))} /></label>
                     </div>
+                    <p className="field-tip field-tip--soft">{'固定地区限制：当前仅允许使用已选择国家/区域的代理进入代理池与代理组。'}</p>
                     <label className="field-card field-card--checkbox">
                       <input type="checkbox" checked={draft.is_working !== false} onChange={(event) => setProviderDrafts((current) => ({ ...current, [item.provider_key]: { ...draft, is_working: event.target.checked } }))} />
                       <span>{tr('field_is_working')}</span>

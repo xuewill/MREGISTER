@@ -6,6 +6,7 @@ import json
 import os
 import secrets
 import shutil
+import socket
 import sqlite3
 import subprocess
 import sys
@@ -17,6 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 from fastapi import FastAPI, HTTPException, Request
@@ -132,9 +134,10 @@ UI_TRANSLATIONS = {
         "proxy_groups_title": "代理组",
         "proxy_groups_desc": "将多个代理组合在一起，任务可按轮询模式自动切换。",
         "proxy_pool_provider_title": "供应商设置",
-        "proxy_pool_provider_desc": "在这里配置站点 Token 与筛选条件，再同步代理池数据。",
+        "proxy_pool_provider_desc": "在这里配置供应商来源和筛选条件，再同步代理池数据。",
         "proxy_pool_list_title": "代理池列表",
         "proxy_pool_list_desc": "支持多选代理并批量加入代理组。",
+        "proxy_pool_detail_title": "详细页面",
         "field_provider_token": "API Token",
         "field_proxy_group_select": "选择代理组",
         "field_proxy_group_name": "代理组名称",
@@ -159,6 +162,8 @@ UI_TRANSLATIONS = {
         "provider_status_empty": "未配置",
         "proxy_group_mode_hint": "选择代理组后，任务会按轮询方式自动切换代理地址。",
         "proxy_provider_mode_hint": "根据代理池中保存的 Proxy-Free 配置即时拉取一个代理。",
+        "provider_openproxylist_hint": "OpenProxyList 使用公开下载列表，不需要 API Key。",
+        "provider_proxyfree_hint": "Proxy-Free 使用 Premium API，可设置 Token 与筛选条件。",
         "delete_proxy_group_confirm": "删除代理组 {name}？",
         "proxy_group_meta": "{count} 个代理 | 创建于 {created_at}",
         "pool_item_meta": "{source} | {protocol} | {country} | {status}",
@@ -168,6 +173,27 @@ UI_TRANSLATIONS = {
         "proxy_pool_filter_country": "筛选国家",
         "proxy_pool_filter_source": "筛选来源",
         "proxy_pool_filter_working": "仅看可用",
+        "preset_country_us": "美国",
+        "preset_country_sg": "新加坡",
+        "preset_country_jp": "日本",
+        "preset_country_uk": "英国",
+        "preset_country_au": "澳大利亚",
+        "preset_country_hk": "香港",
+        "preset_region_us": "美国",
+        "preset_region_sg": "新加坡",
+        "preset_region_jp": "日本",
+        "preset_region_uk": "英国",
+        "preset_region_au": "澳大利亚",
+        "preset_region_hk": "香港",
+        "preset_protocol_https": "HTTPS",
+        "preset_protocol_socks4": "SOCKS4",
+        "preset_protocol_socks5": "SOCKS5",
+        "preset_anonymity_elite": "Elite",
+        "preset_anonymity_anonymous": "Anonymous",
+        "preset_anonymity_transparent": "Transparent",
+        "preset_sort_speed_desc": "速度从高到低",
+        "preset_sort_uptime_desc": "在线率从高到低",
+        "preset_sort_checked_desc": "最近检查优先",
         "proxy_pool_speed": "速度",
         "proxy_pool_uptime": "在线率",
         "proxy_pool_country": "国家",
@@ -372,9 +398,10 @@ UI_TRANSLATIONS = {
         "proxy_groups_title": "Proxy Groups",
         "proxy_groups_desc": "Combine multiple proxies so tasks can rotate through them automatically.",
         "proxy_pool_provider_title": "Provider Settings",
-        "proxy_pool_provider_desc": "Configure tokens and filters here before syncing provider data.",
+        "proxy_pool_provider_desc": "Configure provider sources and filters here before syncing provider data.",
         "proxy_pool_list_title": "Proxy Pool Entries",
         "proxy_pool_list_desc": "Select multiple pool proxies and add them to a proxy group.",
+        "proxy_pool_detail_title": "Detail View",
         "field_provider_token": "API Token",
         "field_proxy_group_select": "Proxy group",
         "field_proxy_group_name": "Group name",
@@ -399,6 +426,8 @@ UI_TRANSLATIONS = {
         "provider_status_empty": "Not configured",
         "proxy_group_mode_hint": "When a proxy group is selected, tasks rotate through its proxy URLs.",
         "proxy_provider_mode_hint": "Fetch a proxy instantly using the saved Proxy-Free filters.",
+        "provider_openproxylist_hint": "OpenProxyList uses public downloadable lists and does not require an API key.",
+        "provider_proxyfree_hint": "Proxy-Free uses the Premium API with token and filters.",
         "delete_proxy_group_confirm": "Delete proxy group {name}?",
         "proxy_group_meta": "{count} proxies | Created at {created_at}",
         "pool_item_meta": "{source} | {protocol} | {country} | {status}",
@@ -408,6 +437,27 @@ UI_TRANSLATIONS = {
         "proxy_pool_filter_country": "Filter country",
         "proxy_pool_filter_source": "Filter source",
         "proxy_pool_filter_working": "Working only",
+        "preset_country_us": "United States",
+        "preset_country_sg": "Singapore",
+        "preset_country_jp": "Japan",
+        "preset_country_uk": "United Kingdom",
+        "preset_country_au": "Australia",
+        "preset_country_hk": "Hong Kong",
+        "preset_region_us": "United States",
+        "preset_region_sg": "Singapore",
+        "preset_region_jp": "Japan",
+        "preset_region_uk": "United Kingdom",
+        "preset_region_au": "Australia",
+        "preset_region_hk": "Hong Kong",
+        "preset_protocol_https": "HTTPS",
+        "preset_protocol_socks4": "SOCKS4",
+        "preset_protocol_socks5": "SOCKS5",
+        "preset_anonymity_elite": "Elite",
+        "preset_anonymity_anonymous": "Anonymous",
+        "preset_anonymity_transparent": "Transparent",
+        "preset_sort_speed_desc": "Speed high to low",
+        "preset_sort_uptime_desc": "Uptime high to low",
+        "preset_sort_checked_desc": "Recently checked first",
         "proxy_pool_speed": "Speed",
         "proxy_pool_uptime": "Uptime",
         "proxy_pool_country": "Country",
@@ -555,6 +605,7 @@ DEFAULT_SETTING_KEYS = {
     "default_gptmail_credential_id": None,
     "default_yescaptcha_credential_id": None,
     "default_proxy_id": None,
+    "default_proxy_provider_key": None,
 }
 
 db_lock = threading.RLock()
@@ -999,6 +1050,25 @@ def get_proxy_pool_items() -> list[dict[str, Any]]:
     return items
 
 
+def delete_unavailable_pool_items() -> int:
+    count = execute("DELETE FROM proxy_pool_items WHERE is_working = 0")
+    return count
+
+
+def proxy_pool_summary() -> dict[str, Any]:
+    items = get_proxy_pool_items()
+    defaults = get_defaults()
+    providers = get_proxy_provider_settings()
+    auto_sync_enabled = any(bool((item.get("config") or {}).get("auto_sync")) and bool(item.get("enabled")) for item in providers)
+    default_provider = defaults.get("default_proxy_provider_key")
+    return {
+        "available_count": sum(1 for item in items if item.get("is_working")),
+        "invalid_count": sum(1 for item in items if not item.get("is_working")),
+        "default_proxy_provider_key": default_provider,
+        "auto_sync_enabled": auto_sync_enabled,
+    }
+
+
 def get_proxy_group(group_id: int) -> sqlite3.Row:
     row = fetch_one("SELECT * FROM proxy_groups WHERE id = ?", (group_id,))
     if row is None:
@@ -1069,6 +1139,7 @@ def validate_proxy_provider(provider_key: str) -> str:
 
 def sanitize_provider_config(payload: ProxyProviderSettingsPayload) -> dict[str, Any]:
     return {
+        "auto_sync": bool(payload.auto_sync),
         "country": (payload.country or "").strip() or None,
         "region": (payload.region or "").strip() or None,
         "protocol": (payload.protocol or "").strip().upper() or None,
@@ -1123,7 +1194,22 @@ def make_proxy_url(protocol: str | None, ip_address: str | None, port: int | Non
     return f"{scheme}://{ip_address}:{int(port)}"
 
 
+def proxy_url_is_reachable(proxy_url: str, timeout: float = 2.5) -> bool:
+    try:
+        parsed = urlparse(proxy_url)
+        hostname = parsed.hostname
+        port = parsed.port
+        if not hostname or not port:
+            return False
+        with socket.create_connection((hostname, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
 def upsert_pool_item(*, provider_key: str, proxy_url: str, remote_id: str | None, ip_address: str | None, port: int | None, protocol: str | None, country_code: str | None, country_name: str | None, anonymity: str | None, speed: float | None, uptime: float | None, is_working: bool, source_label: str, metadata: dict[str, Any]) -> None:
+    if not proxy_url_is_reachable(proxy_url):
+        return
     timestamp = now_iso()
     execute_no_return(
         """
@@ -1298,6 +1384,27 @@ def sync_proxy_provider(provider_key: str) -> int:
     raise HTTPException(status_code=400, detail="Unsupported proxy provider")
 
 
+def auto_sync_proxy_providers() -> None:
+    for item in get_proxy_provider_settings():
+        config = item.get("config") or {}
+        if not item.get("enabled"):
+            continue
+        if not config.get("auto_sync"):
+            continue
+        last_synced_at = item.get("last_synced_at")
+        if last_synced_at:
+            try:
+                last_sync = datetime.strptime(str(last_synced_at), "%Y-%m-%d %H:%M:%S")
+                if (now() - last_sync) < timedelta(minutes=5):
+                    continue
+            except Exception:
+                pass
+        try:
+            sync_proxy_provider(str(item["provider_key"]))
+        except Exception:
+            pass
+
+
 def add_group_members(*, group_id: int, proxy_urls: list[str], proxy_ids: list[int], pool_item_ids: list[int]) -> None:
     timestamp = now_iso()
     seen: set[str] = set()
@@ -1410,7 +1517,14 @@ def resolve_proxy_value(proxy_mode: str, proxy_id: int | None) -> str | None:
 def resolve_proxy_selection(proxy_mode: str, proxy_id: int | None, proxy_group_id: int | None) -> str | None:
     mode = proxy_mode or "none"
     if mode in {"none", "default", "custom"}:
-        return resolve_proxy_value(mode, proxy_id)
+        if mode == "default":
+            defaults = get_defaults()
+            if defaults.get("default_proxy_provider_key") == "proxy-free.com":
+                mode = "provider"
+            else:
+                return resolve_proxy_value(mode, proxy_id)
+        elif mode in {"none", "custom"}:
+            return resolve_proxy_value(mode, proxy_id)
     if mode == "group":
         if proxy_group_id is None:
             raise HTTPException(status_code=400, detail="A proxy group must be selected")
@@ -1421,7 +1535,7 @@ def resolve_proxy_selection(proxy_mode: str, proxy_id: int | None, proxy_group_i
         if imported <= 0:
             raise HTTPException(status_code=400, detail="Proxy-Free returned no proxies")
         row = fetch_one(
-            "SELECT * FROM proxy_pool_items WHERE provider_key = 'proxy-free.com' AND is_working = 1 ORDER BY updated_at DESC, id DESC LIMIT 1"
+            "SELECT * FROM proxy_pool_items WHERE provider_key = 'proxy-free.com' AND is_working = 1 ORDER BY updated_at DESC, id ASC LIMIT 1"
         )
         if row is None:
             raise HTTPException(status_code=400, detail="No Proxy-Free proxy is available")
@@ -1515,6 +1629,7 @@ class ProxyProviderSettingsPayload(BaseModel):
     provider_key: str
     enabled: bool = True
     api_token: str | None = None
+    auto_sync: bool = False
     country: str | None = None
     region: str | None = None
     protocol: str | None = None
@@ -1589,6 +1704,7 @@ class DefaultSettingsPayload(BaseModel):
     default_gptmail_credential_id: int | None = None
     default_yescaptcha_credential_id: int | None = None
     default_proxy_id: int | None = None
+    default_proxy_provider_key: str | None = None
 
 
 class ApiKeyCreate(BaseModel):
@@ -1790,6 +1906,7 @@ class TaskSupervisor:
         while not self._stop_event.is_set():
             try:
                 cleanup_expired_sessions()
+                auto_sync_proxy_providers()
                 self._finalize_finished()
                 self._enforce_target_counts()
                 self._trigger_schedules()
@@ -2034,6 +2151,7 @@ def state_payload() -> dict[str, Any]:
         "proxies": get_proxies(),
         "proxy_provider_settings": get_proxy_provider_settings(),
         "proxy_pool_items": get_proxy_pool_items(),
+        "proxy_pool_summary": proxy_pool_summary(),
         "proxy_groups": get_proxy_groups(),
         "tasks": get_tasks(),
         "schedules": get_schedules(),
@@ -2144,9 +2262,12 @@ async def update_defaults(payload: DefaultSettingsPayload, request: Request) -> 
         raise HTTPException(status_code=400, detail="Default YesCaptcha credential is invalid")
     if payload.default_proxy_id is not None:
         get_proxy(payload.default_proxy_id)
+    if payload.default_proxy_provider_key is not None:
+        validate_proxy_provider(payload.default_proxy_provider_key)
     set_setting("default_gptmail_credential_id", str(payload.default_gptmail_credential_id) if payload.default_gptmail_credential_id else None)
     set_setting("default_yescaptcha_credential_id", str(payload.default_yescaptcha_credential_id) if payload.default_yescaptcha_credential_id else None)
     set_setting("default_proxy_id", str(payload.default_proxy_id) if payload.default_proxy_id else None)
+    set_setting("default_proxy_provider_key", payload.default_proxy_provider_key or None)
     return JSONResponse({"ok": True, "defaults": get_defaults()})
 
 
@@ -2229,6 +2350,13 @@ async def sync_proxy_pool(payload: ProxyPoolSyncPayload, request: Request) -> JS
     require_authenticated(request)
     imported = sync_proxy_provider(payload.provider_key)
     return JSONResponse({"ok": True, "imported": imported})
+
+
+@app.post("/api/proxy-pool/prune-invalid")
+async def prune_invalid_proxy_pool(request: Request) -> JSONResponse:
+    require_authenticated(request)
+    deleted = delete_unavailable_pool_items()
+    return JSONResponse({"ok": True, "deleted": deleted})
 
 
 @app.post("/api/proxy-groups")
