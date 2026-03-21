@@ -17,6 +17,7 @@ import {
 import { BusyButton, Modal } from './ui.jsx';
 
 const SIDEBAR_LOGO_SRC = '/static/MAISHANhlogomini.png';
+const PROJECT_GITHUB_URL = 'https://github.com/Maishan-Inc/MREGISTER';
 
 function normalizeStatePayload(payload) {
   return {
@@ -95,6 +96,206 @@ function SidebarIcon({ name }) {
         </svg>
       );
   }
+}
+
+function GithubIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.5 0-.24-.01-1.05-.01-1.9-2.78.62-3.36-1.21-3.36-1.21-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .08 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.85.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.09 0-1.13.39-2.05 1.03-2.78-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.06A9.3 9.3 0 0 1 12 6.84c.85 0 1.71.12 2.51.35 1.9-1.34 2.74-1.06 2.74-1.06.55 1.42.21 2.47.1 2.73.64.73 1.03 1.65 1.03 2.78 0 3.96-2.34 4.82-4.57 5.08.36.32.68.96.68 1.94 0 1.4-.01 2.53-.01 2.88 0 .28.18.61.69.5A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z" />
+    </svg>
+  );
+}
+
+function getDocsContent(uiLang, apiBaseUrl) {
+  const isZh = String(uiLang || '').toLowerCase().startsWith('zh');
+
+  if (isZh) {
+    return {
+      heroTitle: '部署、初始化与使用流程',
+      heroText: '这一页把 MREGISTER 的部署、首次配置、日常任务操作和 API 接入整理成一条完整链路。按顺序执行即可，不需要在多个页面之间来回查找。',
+      deployTitle: '一键部署',
+      deployText: '推荐直接使用 Docker Compose。本仓库当前会基于本地代码构建镜像，适合你同步前端和后端改动后立即部署。',
+      deploySteps: [
+        '确认服务器已安装 Docker 与 Docker Compose。',
+        '在项目根目录执行 `docker compose up -d --build`。',
+        '执行 `docker compose ps` 确认容器状态为 `Up`。',
+        '执行 `docker compose logs -f` 查看启动日志和错误输出。',
+        `浏览器打开 ${apiBaseUrl || 'http://127.0.0.1:8000'} 进入控制台。`,
+      ],
+      localTitle: '本地调试',
+      localText: '如果你正在开发界面或调试后端逻辑，可以先使用 Python 直接启动服务。',
+      localCommands: [
+        'python -m pip install -r web_console/requirements.txt',
+        'uvicorn web_console.app:app --host 0.0.0.0 --port 8000',
+      ],
+      firstUseTitle: '首次初始化',
+      firstUseText: '部署完成后，首次打开页面会先进入协议确认和管理员密码初始化流程。完成后再配置默认资源。',
+      firstUseSteps: [
+        '阅读并确认 Maishan Inc. 非商业性协议。',
+        '设置管理员密码并进入后台。',
+        '在“凭据”页面添加 GPTMail 凭据。',
+        '如需使用 grok-register，再添加 YesCaptcha 凭据。',
+        '如需固定出口，在“代理”页面添加代理并设置默认值。',
+        '在“API”页面创建 API Key，供外部程序调用。',
+      ],
+      usageTitle: '日常使用流程',
+      usageText: '如果你主要在后台手动操作，建议按下面的顺序使用。',
+      usageSteps: [
+        '在“新建任务”中选择平台、数量、并发和代理模式。',
+        '创建任务后跳转到“任务详情”，查看实时日志和完成数。',
+        '任务结束后下载压缩包并核对结果。',
+        '如果是高频固定需求，用“定时任务”自动触发。',
+      ],
+      apiTitle: 'API 接入流程',
+      apiText: '如果你要把项目接入自己的程序，推荐只调用外部 API，不要直接操作数据库。',
+      apiSteps: [
+        '在后台先创建一个 API Key。',
+        '调用 `POST /api/external/tasks` 创建任务。',
+        '轮询 `GET /api/external/tasks/{task_id}` 查看进度。',
+        '任务完成后调用 `GET /api/external/tasks/{task_id}/download` 下载结果。',
+      ],
+      endpointTitle: '接口速查',
+      endpointHeaders: ['方法', '路径', '说明'],
+      endpoints: [
+        ['POST', '/api/external/tasks', '创建一个新的外部任务'],
+        ['GET', '/api/external/tasks/{task_id}', '查询任务状态、完成数量和下载地址'],
+        ['GET', '/api/external/tasks/{task_id}/download', '下载任务结果压缩包'],
+      ],
+      paramsTitle: '创建任务参数',
+      paramHeaders: ['字段', '类型', '必填', '说明'],
+      params: [
+        ['platform', 'string', '是', '支持 `openai-register` 与 `grok-register`'],
+        ['quantity', 'integer', '是', '目标成功数量，按真实成功数统计'],
+        ['use_proxy', 'boolean', '否', '是否使用后台默认代理'],
+        ['concurrency', 'integer', '否', '并发数，默认 1'],
+        ['name', 'string', '否', '自定义任务名称'],
+      ],
+      tipsTitle: '部署建议',
+      tips: [
+        '持久化目录是 `web_console/runtime/`，请定期备份。',
+        '生产环境建议在外层加 Nginx 或 Caddy，并启用 HTTPS。',
+        '不要把后台直接裸露到公网上。',
+        '更新代码后优先执行 `docker compose up -d --build`。',
+      ],
+      createExampleTitle: '创建任务示例',
+      createExampleHttp: `POST ${apiBaseUrl}/api/external/tasks
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
+{
+  "platform": "openai-register",
+  "quantity": 10,
+  "use_proxy": true,
+  "concurrency": 1
+}`,
+      createExampleCurl: `curl -X POST "${apiBaseUrl}/api/external/tasks" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d "{\\"platform\\":\\"openai-register\\",\\"quantity\\":10,\\"use_proxy\\":true,\\"concurrency\\":1}"`,
+      queryExampleTitle: '查询任务示例',
+      queryExampleHttp: `GET ${apiBaseUrl}/api/external/tasks/TASK_ID
+Authorization: Bearer YOUR_API_KEY`,
+      queryExampleCurl: `curl "${apiBaseUrl}/api/external/tasks/TASK_ID" \\
+  -H "Authorization: Bearer YOUR_API_KEY"`,
+      downloadExampleTitle: '下载结果示例',
+      downloadExampleCurl: `curl -L "${apiBaseUrl}/api/external/tasks/TASK_ID/download" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -o result.zip`,
+    };
+  }
+
+  return {
+    heroTitle: 'Deployment, Setup, and Usage Flow',
+    heroText: 'This page condenses the full MREGISTER flow into one place: deploy, initialize, operate tasks, and integrate via API.',
+    deployTitle: 'Recommended Deployment',
+    deployText: 'Use Docker Compose by default. The repository now builds from the local source tree, so frontend and backend changes are included immediately.',
+    deploySteps: [
+      'Install Docker and Docker Compose on the host.',
+      'Run `docker compose up -d --build` from the project root.',
+      'Run `docker compose ps` to verify the container is up.',
+      'Run `docker compose logs -f` to inspect boot logs and runtime errors.',
+      `Open ${apiBaseUrl || 'http://127.0.0.1:8000'} in your browser.`,
+    ],
+    localTitle: 'Local Development',
+    localText: 'If you are debugging the UI or backend directly, start the app with Python.',
+    localCommands: [
+      'python -m pip install -r web_console/requirements.txt',
+      'uvicorn web_console.app:app --host 0.0.0.0 --port 8000',
+    ],
+    firstUseTitle: 'First-Time Initialization',
+    firstUseText: 'On first visit, the console is locked until the agreement flow and admin password setup are completed.',
+    firstUseSteps: [
+      'Read and accept the Maishan Inc. non-commercial agreement.',
+      'Set the admin password.',
+      'Add a GPTMail credential.',
+      'Add a YesCaptcha credential if you plan to use grok-register.',
+      'Add and optionally set a default proxy.',
+      'Create an API key for external integrations.',
+    ],
+    usageTitle: 'Daily Workflow',
+    usageText: 'For manual operation inside the console, the following order keeps things simple.',
+    usageSteps: [
+      'Create a task with platform, quantity, concurrency, and proxy mode.',
+      'Open Task Detail to inspect live logs and completion counts.',
+      'Download the archive after completion and verify outputs.',
+      'Use schedules for repeated daily jobs.',
+    ],
+    apiTitle: 'API Workflow',
+    apiText: 'For external integrations, use the public API only. Do not bypass the console by writing directly to the database.',
+    apiSteps: [
+      'Create an API key in the console.',
+      'Call `POST /api/external/tasks` to create a task.',
+      'Poll `GET /api/external/tasks/{task_id}` for progress.',
+      'Call `GET /api/external/tasks/{task_id}/download` when the task is complete.',
+    ],
+    endpointTitle: 'Endpoint Quick Reference',
+    endpointHeaders: ['Method', 'Path', 'Description'],
+    endpoints: [
+      ['POST', '/api/external/tasks', 'Create a new external task'],
+      ['GET', '/api/external/tasks/{task_id}', 'Query task status, completion count, and download URL'],
+      ['GET', '/api/external/tasks/{task_id}/download', 'Download the task result archive'],
+    ],
+    paramsTitle: 'Create Task Parameters',
+    paramHeaders: ['Field', 'Type', 'Required', 'Description'],
+    params: [
+      ['platform', 'string', 'yes', 'Supports `openai-register` and `grok-register`'],
+      ['quantity', 'integer', 'yes', 'Target success count'],
+      ['use_proxy', 'boolean', 'no', 'Whether to use the configured default proxy'],
+      ['concurrency', 'integer', 'no', 'Concurrency, default is 1'],
+      ['name', 'string', 'no', 'Custom task name'],
+    ],
+    tipsTitle: 'Operational Notes',
+    tips: [
+      'Persist and back up `web_console/runtime/` regularly.',
+      'Use a reverse proxy and HTTPS in production.',
+      'Do not expose the console directly on the public internet.',
+      'After code changes, prefer `docker compose up -d --build`.',
+    ],
+    createExampleTitle: 'Create Task Example',
+    createExampleHttp: `POST ${apiBaseUrl}/api/external/tasks
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
+{
+  "platform": "openai-register",
+  "quantity": 10,
+  "use_proxy": true,
+  "concurrency": 1
+}`,
+    createExampleCurl: `curl -X POST "${apiBaseUrl}/api/external/tasks" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d "{\\"platform\\":\\"openai-register\\",\\"quantity\\":10,\\"use_proxy\\":true,\\"concurrency\\":1}"`,
+    queryExampleTitle: 'Query Task Example',
+    queryExampleHttp: `GET ${apiBaseUrl}/api/external/tasks/TASK_ID
+Authorization: Bearer YOUR_API_KEY`,
+    queryExampleCurl: `curl "${apiBaseUrl}/api/external/tasks/TASK_ID" \\
+  -H "Authorization: Bearer YOUR_API_KEY"`,
+    downloadExampleTitle: 'Download Result Example',
+    downloadExampleCurl: `curl -L "${apiBaseUrl}/api/external/tasks/TASK_ID/download" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -o result.zip`,
+  };
 }
 
 export function ConsoleApp() {
@@ -1050,6 +1251,148 @@ export function ConsoleApp() {
   }
 
   function renderDocs() {
+    const isZh = String(APP_CONFIG.uiLang || '').toLowerCase().startsWith('zh');
+    const apiBaseUrl = APP_CONFIG.apiBaseUrl || 'http://127.0.0.1:8000';
+    const docs = isZh ? {
+      heroTitle: '外部任务接口说明',
+      heroText: '这里仅保留 API 文档。部署方式、初始化流程和日常使用说明已整理到 README，后台页面只负责给你可直接调用的接口信息。',
+      flowTitle: '推荐调用流程',
+      flowText: '建议先在后台创建 API Key，再从外部程序调用公开接口。不要绕过控制台直接写数据库。',
+      flowSteps: [
+        '在后台“API”页面生成并保存 API Key。',
+        '调用 `POST /api/external/tasks` 创建任务。',
+        '轮询 `GET /api/external/tasks/{task_id}` 查看状态、完成数量与下载地址。',
+        '任务完成后调用 `GET /api/external/tasks/{task_id}/download` 下载结果压缩包。',
+      ],
+      endpointTitle: '接口列表',
+      endpointHeaders: ['方法', '路径', '说明'],
+      endpoints: [
+        ['POST', '/api/external/tasks', '创建新的外部任务'],
+        ['GET', '/api/external/tasks/{task_id}', '查询任务状态、完成数量与下载地址'],
+        ['GET', '/api/external/tasks/{task_id}/download', '下载任务结果压缩包'],
+      ],
+      paramsTitle: '创建任务参数',
+      paramHeaders: ['字段', '类型', '必填', '说明'],
+      params: [
+        ['platform', 'string', '是', '支持 `openai-register` 与 `grok-register`'],
+        ['quantity', 'integer', '是', '目标成功数量，按真实成功数统计'],
+        ['use_proxy', 'boolean', '否', '是否使用后台默认代理'],
+        ['concurrency', 'integer', '否', '并发数，默认 `1`'],
+        ['name', 'string', '否', '自定义任务名称'],
+      ],
+      notesTitle: '返回说明',
+      notes: [
+        '`completed_count` 表示真实成功数，不按尝试次数累计。',
+        '`download_url` 只有在任务完成并生成压缩包后才会返回。',
+        '通过 API 创建的任务会在 `auto_delete_at` 指定时间后自动清理。',
+        `以下示例默认以 ${apiBaseUrl} 作为接口地址。`,
+      ],
+      createTitle: '创建任务示例',
+      createHttp: `POST ${apiBaseUrl}/api/external/tasks
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
+{
+  "platform": "openai-register",
+  "quantity": 10,
+  "use_proxy": true,
+  "concurrency": 1,
+  "name": "openai-batch-01"
+}`,
+      createCurl: `curl -X POST "${apiBaseUrl}/api/external/tasks" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d "{\\"platform\\":\\"openai-register\\",\\"quantity\\":10,\\"use_proxy\\":true,\\"concurrency\\":1,\\"name\\":\\"openai-batch-01\\"}"`,
+      queryTitle: '查询任务示例',
+      queryHttp: `GET ${apiBaseUrl}/api/external/tasks/TASK_ID
+Authorization: Bearer YOUR_API_KEY`,
+      queryCurl: `curl "${apiBaseUrl}/api/external/tasks/TASK_ID" \\
+  -H "Authorization: Bearer YOUR_API_KEY"`,
+      queryJson: `{
+  "task_id": 12,
+  "status": "running",
+  "completed_count": 4,
+  "target_quantity": 10,
+  "auto_delete_at": "2026-03-21 20:15:00",
+  "download_url": null
+}`,
+      downloadTitle: '下载结果示例',
+      downloadHttp: `GET ${apiBaseUrl}/api/external/tasks/TASK_ID/download
+Authorization: Bearer YOUR_API_KEY`,
+      downloadCurl: `curl -L "${apiBaseUrl}/api/external/tasks/TASK_ID/download" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -o result.zip`,
+    } : {
+      heroTitle: 'External Task API Reference',
+      heroText: 'Only the API guide remains here. Deployment, initialization, and daily workflow notes are now kept in the README.',
+      flowTitle: 'Recommended Workflow',
+      flowText: 'Create an API key in the console first, then call the public API from your external service. Do not write to the database directly.',
+      flowSteps: [
+        'Generate and save an API key in the console.',
+        'Call `POST /api/external/tasks` to create a task.',
+        'Poll `GET /api/external/tasks/{task_id}` for status, completion count, and download URL.',
+        'Call `GET /api/external/tasks/{task_id}/download` after completion.',
+      ],
+      endpointTitle: 'Endpoints',
+      endpointHeaders: ['Method', 'Path', 'Description'],
+      endpoints: [
+        ['POST', '/api/external/tasks', 'Create a new external task'],
+        ['GET', '/api/external/tasks/{task_id}', 'Query task status, completion count, and download URL'],
+        ['GET', '/api/external/tasks/{task_id}/download', 'Download the task result archive'],
+      ],
+      paramsTitle: 'Create Task Parameters',
+      paramHeaders: ['Field', 'Type', 'Required', 'Description'],
+      params: [
+        ['platform', 'string', 'yes', 'Supports `openai-register` and `grok-register`'],
+        ['quantity', 'integer', 'yes', 'Target success count'],
+        ['use_proxy', 'boolean', 'no', 'Whether to use the configured default proxy'],
+        ['concurrency', 'integer', 'no', 'Concurrency, default is `1`'],
+        ['name', 'string', 'no', 'Custom task name'],
+      ],
+      notesTitle: 'Response Notes',
+      notes: [
+        '`completed_count` is the real success count.',
+        '`download_url` appears only after the task finishes and the archive is generated.',
+        'API-created tasks are cleaned up automatically after `auto_delete_at`.',
+        `Examples below use ${apiBaseUrl} as the base URL.`,
+      ],
+      createTitle: 'Create Task Example',
+      createHttp: `POST ${apiBaseUrl}/api/external/tasks
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
+{
+  "platform": "openai-register",
+  "quantity": 10,
+  "use_proxy": true,
+  "concurrency": 1,
+  "name": "openai-batch-01"
+}`,
+      createCurl: `curl -X POST "${apiBaseUrl}/api/external/tasks" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d "{\\"platform\\":\\"openai-register\\",\\"quantity\\":10,\\"use_proxy\\":true,\\"concurrency\\":1,\\"name\\":\\"openai-batch-01\\"}"`,
+      queryTitle: 'Query Task Example',
+      queryHttp: `GET ${apiBaseUrl}/api/external/tasks/TASK_ID
+Authorization: Bearer YOUR_API_KEY`,
+      queryCurl: `curl "${apiBaseUrl}/api/external/tasks/TASK_ID" \\
+  -H "Authorization: Bearer YOUR_API_KEY"`,
+      queryJson: `{
+  "task_id": 12,
+  "status": "running",
+  "completed_count": 4,
+  "target_quantity": 10,
+  "auto_delete_at": "2026-03-21 20:15:00",
+  "download_url": null
+}`,
+      downloadTitle: 'Download Result Example',
+      downloadHttp: `GET ${apiBaseUrl}/api/external/tasks/TASK_ID/download
+Authorization: Bearer YOUR_API_KEY`,
+      downloadCurl: `curl -L "${apiBaseUrl}/api/external/tasks/TASK_ID/download" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -o result.zip`,
+    };
+
     return (
       <section className="section-card active">
         <div className="section-head">
@@ -1058,95 +1401,114 @@ export function ConsoleApp() {
             <h2>{tr('section_docs')}</h2>
           </div>
         </div>
-        <article className="panel">
-          <div className="doc-block">
-            <h3>{tr('docs_intro_title')}</h3>
-            <p>{tr('docs_intro_desc')}</p>
-          </div>
-          <div className="doc-block">
-            <h3>{tr('docs_deploy_title')}</h3>
-            <p>{tr('docs_deploy_desc')}</p>
-            <h4>{tr('docs_local_deploy_title')}</h4>
-            <pre className="doc-pre">python -m pip install -r web_console/requirements.txt{'\n'}uvicorn web_console.app:app --host 0.0.0.0 --port 8000</pre>
-            <h4>{tr('docs_compose_deploy_title')}</h4>
-            <pre className="doc-pre">docker compose pull{'\n'}docker compose up -d</pre>
-          </div>
-          <div className="doc-block">
-            <h3>{tr('docs_api_flow_title')}</h3>
-            <p>{tr('docs_api_flow_desc')}</p>
-            <pre className="doc-pre">{tr('docs_flow_1')}{'\n'}{tr('docs_flow_2')}{'\n'}{tr('docs_flow_3')}{'\n'}{tr('docs_flow_4')}</pre>
-          </div>
-          <div className="doc-block">
-            <h3>{tr('docs_endpoints_title')}</h3>
-            <table className="doc-table">
-              <thead>
-                <tr><th>{tr('table_method')}</th><th>{tr('table_path')}</th><th>{tr('table_desc')}</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>POST</td><td><code>/api/external/tasks</code></td><td>{tr('endpoint_create_desc')}</td></tr>
-                <tr><td>GET</td><td><code>/api/external/tasks/{'{task_id}'}</code></td><td>{tr('endpoint_query_desc')}</td></tr>
-                <tr><td>GET</td><td><code>/api/external/tasks/{'{task_id}'}/download</code></td><td>{tr('endpoint_download_desc')}</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div className="doc-block">
-            <h3>{tr('docs_create_params_title')}</h3>
-            <table className="doc-table">
-              <thead>
-                <tr><th>{tr('table_field')}</th><th>{tr('table_type')}</th><th>{tr('table_required')}</th><th>{tr('table_desc')}</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>platform</code></td><td>string</td><td>{tr('required_yes')}</td><td>{tr('param_platform_desc')}</td></tr>
-                <tr><td><code>quantity</code></td><td>integer</td><td>{tr('required_yes')}</td><td>{tr('param_quantity_desc')}</td></tr>
-                <tr><td><code>use_proxy</code></td><td>boolean</td><td>{tr('required_no')}</td><td>{tr('param_use_proxy_desc')}</td></tr>
-                <tr><td><code>concurrency</code></td><td>integer</td><td>{tr('required_no')}</td><td>{tr('param_concurrency_desc')}</td></tr>
-                <tr><td><code>name</code></td><td>string</td><td>{tr('required_no')}</td><td>{tr('param_name_desc')}</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div className="doc-block">
-            <h3>{tr('docs_create_example_title')}</h3>
-            <pre className="doc-pre">{`POST ${APP_CONFIG.apiBaseUrl}/api/external/tasks
-Authorization: Bearer YOUR_API_KEY
-Content-Type: application/json
+        <article className="panel docs-panel">
+          <section className="docs-hero">
+            <h3>{docs.heroTitle}</h3>
+            <p>{docs.heroText}</p>
+          </section>
 
-{
-  "platform": "openai-register",
-  "quantity": 10,
-  "use_proxy": true,
-  "concurrency": 1
-}`}</pre>
-            <pre className="doc-pre">{`curl -X POST "${APP_CONFIG.apiBaseUrl}/api/external/tasks" \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d "{\"platform\":\"openai-register\",\"quantity\":10,\"use_proxy\":true,\"concurrency\":1}"`}</pre>
+          <section className="doc-card">
+            <h3>{docs.flowTitle}</h3>
+            <p>{docs.flowText}</p>
+            <ol className="doc-step-list">
+              {docs.flowSteps.map((item) => <li key={item}>{item}</li>)}
+            </ol>
+          </section>
+
+          <div className="docs-grid">
+            <section className="doc-card">
+              <h3>{docs.endpointTitle}</h3>
+              <div className="doc-table-wrap">
+                <table className="doc-table">
+                  <thead>
+                    <tr>
+                      {docs.endpointHeaders.map((item) => <th key={item}>{item}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {docs.endpoints.map(([method, path, desc]) => (
+                      <tr key={`${method}-${path}`}>
+                        <td>{method}</td>
+                        <td><code>{path}</code></td>
+                        <td>{desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="doc-card">
+              <h3>{docs.paramsTitle}</h3>
+              <div className="doc-table-wrap">
+                <table className="doc-table">
+                  <thead>
+                    <tr>
+                      {docs.paramHeaders.map((item) => <th key={item}>{item}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {docs.params.map(([field, type, required, desc]) => (
+                      <tr key={field}>
+                        <td><code>{field}</code></td>
+                        <td>{type}</td>
+                        <td>{required}</td>
+                        <td>{desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
-          <div className="doc-block">
-            <h3>{tr('docs_query_example_title')}</h3>
-            <pre className="doc-pre">{`GET ${APP_CONFIG.apiBaseUrl}/api/external/tasks/TASK_ID
-Authorization: Bearer YOUR_API_KEY`}</pre>
-            <pre className="doc-pre">{`curl "${APP_CONFIG.apiBaseUrl}/api/external/tasks/TASK_ID" \\
-  -H "Authorization: Bearer YOUR_API_KEY"`}</pre>
-            <pre className="doc-pre">{`{
-  "task_id": 12,
-  "status": "running",
-  "completed_count": 4,
-  "target_quantity": 10,
-  "auto_delete_at": "2026-03-16 20:15:00",
-  "download_url": null
-}`}</pre>
-          </div>
-          <div className="doc-block">
-            <h3>{tr('docs_download_example_title')}</h3>
-            <pre className="doc-pre">{`GET ${APP_CONFIG.apiBaseUrl}/api/external/tasks/TASK_ID/download
-Authorization: Bearer YOUR_API_KEY`}</pre>
-            <pre className="doc-pre">{`curl -L "${APP_CONFIG.apiBaseUrl}/api/external/tasks/TASK_ID/download" \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -o result.zip`}</pre>
-          </div>
-          <div className="doc-block">
-            <h3>{tr('docs_response_title')}</h3>
-            <p>{tr('docs_response_desc')}</p>
+
+          <section className="doc-card">
+            <h3>{docs.notesTitle}</h3>
+            <ul className="doc-note-list">
+              {docs.notes.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </section>
+
+          <div className="docs-grid">
+            <section className="doc-card">
+              <h3>{docs.createTitle}</h3>
+              <div className="doc-code-block">
+                <span className="doc-code-label">HTTP</span>
+                <pre className="doc-pre">{docs.createHttp}</pre>
+              </div>
+              <div className="doc-code-block">
+                <span className="doc-code-label">curl</span>
+                <pre className="doc-pre">{docs.createCurl}</pre>
+              </div>
+            </section>
+
+            <section className="doc-card">
+              <h3>{docs.queryTitle}</h3>
+              <div className="doc-code-block">
+                <span className="doc-code-label">HTTP</span>
+                <pre className="doc-pre">{docs.queryHttp}</pre>
+              </div>
+              <div className="doc-code-block">
+                <span className="doc-code-label">curl</span>
+                <pre className="doc-pre">{docs.queryCurl}</pre>
+              </div>
+              <div className="doc-code-block">
+                <span className="doc-code-label">JSON</span>
+                <pre className="doc-pre">{docs.queryJson}</pre>
+              </div>
+            </section>
+
+            <section className="doc-card">
+              <h3>{docs.downloadTitle}</h3>
+              <div className="doc-code-block">
+                <span className="doc-code-label">HTTP</span>
+                <pre className="doc-pre">{docs.downloadHttp}</pre>
+              </div>
+              <div className="doc-code-block">
+                <span className="doc-code-label">curl</span>
+                <pre className="doc-pre">{docs.downloadCurl}</pre>
+              </div>
+            </section>
           </div>
         </article>
       </section>
@@ -1241,6 +1603,16 @@ Authorization: Bearer YOUR_API_KEY`}</pre>
               <p className="eyebrow">{tr('topbar_workspace')}</p>
               <strong>{currentSectionLabel}</strong>
             </div>
+            <a
+              className="topbar-link"
+              href={PROJECT_GITHUB_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Open GitHub project"
+              title="GitHub"
+            >
+              <GithubIcon />
+            </a>
           </div>
           {loadError && loaded ? <div className="toast-error">{loadError}</div> : null}
           {!loaded ? <section className="section-card active"><div className="panel"><p className="empty">Loading...</p></div></section> : renderContent()}

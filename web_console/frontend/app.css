@@ -65,10 +65,18 @@ button, input, select, textarea { font: inherit; }
 .auth-card {
   width: min(560px, 100%);
   padding: 32px;
+  position: relative;
 }
 
 .auth-form { margin-top: 20px; }
 .auth-error { min-height: 22px; margin-top: 14px; color: var(--danger); }
+
+.auth-card.is-locked {
+  filter: blur(2px);
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
 
 .admin-shell {
   position: relative;
@@ -263,7 +271,35 @@ button, input, select, textarea { font: inherit; }
 
 .content-shell { min-width: 0; padding: 22px; }
 .content-topbar { margin-bottom: 18px; }
+.content-topbar { gap: 14px; }
 .content-topbar-copy strong { font-size: 20px; }
+.content-topbar-copy { min-width: 0; margin-right: auto; }
+.topbar-link {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(18, 108, 82, 0.14);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--ink);
+  display: inline-grid;
+  place-items: center;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.topbar-link svg {
+  width: 18px;
+  height: 18px;
+}
+
+.topbar-link:hover {
+  color: var(--accent-strong);
+  border-color: rgba(181, 135, 82, 0.42);
+  background: rgba(255, 252, 246, 0.94);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(40, 30, 10, 0.12);
+}
+
 .mobile-nav-btn { display: none; }
 
 .section-card { display: grid; gap: 20px; }
@@ -580,11 +616,96 @@ pre {
   font-family: Consolas, "SFMono-Regular", Menlo, monospace;
 }
 
-.doc-block { display: grid; gap: 12px; margin-top: 18px; }
-.doc-block:first-child { margin-top: 0; }
-.doc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.doc-table th, .doc-table td { border-bottom: 1px solid var(--line); padding: 12px 10px; text-align: left; vertical-align: top; }
-.doc-pre { border-radius: 18px; }
+.docs-panel,
+.doc-card,
+.doc-code-block {
+  display: grid;
+  gap: 16px;
+}
+
+.docs-panel {
+  gap: 20px;
+}
+
+.docs-hero,
+.doc-card {
+  padding: 22px;
+  border: 1px solid rgba(216, 205, 180, 0.82);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(249, 242, 229, 0.96)),
+    radial-gradient(circle at top right, rgba(18, 108, 82, 0.08), transparent 32%);
+  box-shadow: var(--shadow-soft);
+}
+
+.docs-hero h3,
+.doc-card h3 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.docs-hero p,
+.doc-card p,
+.doc-note-list li,
+.doc-step-list li {
+  line-height: 1.7;
+}
+
+.docs-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.doc-step-list,
+.doc-note-list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+}
+
+.doc-table-wrap {
+  overflow: auto;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.doc-table th,
+.doc-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.doc-table th {
+  color: var(--accent-strong);
+  font-weight: 700;
+  background: rgba(18, 108, 82, 0.05);
+}
+
+.doc-code-block {
+  gap: 8px;
+}
+
+.doc-code-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.doc-pre {
+  margin: 0;
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
 
 .modal-shell {
   position: fixed;
@@ -611,6 +732,111 @@ pre {
   padding: 28px;
 }
 
+.agreement-shell {
+  padding: 20px;
+}
+
+.agreement-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(24, 22, 18, 0.18);
+  backdrop-filter: blur(10px);
+}
+
+.agreement-card {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: min(88vh, 920px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: 28px;
+  border: 1px solid rgba(200, 187, 159, 0.9);
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.99), rgba(248, 239, 224, 0.98));
+  box-shadow: 0 32px 80px rgba(31, 25, 16, 0.18);
+}
+
+.agreement-head {
+  display: grid;
+  gap: 6px;
+}
+
+.agreement-head h2 {
+  font-size: clamp(24px, 4vw, 34px);
+  line-height: 1.1;
+}
+
+.agreement-scroll {
+  overflow: auto;
+  padding: 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(210, 194, 165, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 247, 234, 0.92)),
+    radial-gradient(circle at top right, rgba(181, 135, 82, 0.08), transparent 28%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.agreement-intro,
+.agreement-section,
+.agreement-closing,
+.agreement-confirm {
+  display: grid;
+  gap: 10px;
+}
+
+.agreement-section + .agreement-section,
+.agreement-closing {
+  margin-top: 18px;
+}
+
+.agreement-scroll p,
+.agreement-confirm p {
+  line-height: 1.72;
+}
+
+.agreement-section h3,
+.agreement-closing strong {
+  font-size: 15px;
+  color: var(--accent-strong);
+}
+
+.agreement-confirm {
+  padding: 8px 2px 2px;
+}
+
+.agreement-confirm code {
+  display: inline-block;
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #1c201d;
+  color: #f2f4e9;
+  font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+}
+
+.agreement-confirm-input {
+  margin-top: 8px;
+}
+
+.agreement-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.agreement-status {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.agreement-status.ready {
+  color: var(--accent-strong);
+}
+
 .modal-actions { justify-content: flex-end; margin-top: 24px; }
 .sidebar-overlay { display: none; }
 .toast-error { margin-bottom: 12px; padding: 14px 16px; border-radius: 16px; background: rgba(157, 44, 44, 0.12); color: var(--danger); border: 1px solid rgba(157, 44, 44, 0.18); }
@@ -622,6 +848,7 @@ pre {
 
 @media (max-width: 960px) {
   .admin-shell { grid-template-columns: minmax(0, 1fr); }
+  .docs-grid { grid-template-columns: minmax(0, 1fr); }
   .sidebar {
     position: fixed;
     left: 0;
@@ -644,4 +871,11 @@ pre {
   .metric-grid, .grid-two, .detail-layout { grid-template-columns: 1fr; }
   .task-side-wrap { position: static; }
   .task-side-panel, .task-detail-panel, .large-console pre, #task-console { min-height: auto; max-height: none; }
+  .agreement-card {
+    padding: 22px;
+    max-height: min(92vh, 960px);
+  }
+  .agreement-scroll {
+    padding: 16px;
+  }
 }
