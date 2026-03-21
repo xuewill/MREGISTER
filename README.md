@@ -1,4 +1,5 @@
-# MREGISTER 控制台说明
+# MREGISTER 控制台说明 OPENAI 注册暂时无法使用 正在寻求新方法 
+
 
 `MREGISTER` 是一个基于 FastAPI 的控制台，用来统一管理 `openai-register` 和 `grok-register` 两个注册脚本。它把原本偏命令行的执行方式包装成可持久化、可排队、可下载结果、可通过 API 调用的任务系统。
 
