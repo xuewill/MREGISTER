@@ -1,6 +1,6 @@
-# MREGISTER 控制台说明 ChatGPT已经完美修复  暂时保证创建功能可用 请拉取最新的镜像
+# MREGISTER Web UI 控制台  3月22日:ChatGPT已经完美修复请拉取最新的镜像
 
-`MREGISTER` 是一个基于 FastAPI 的控制台，用来统一管理 `openai-register`、`chatgpt_register_v2` 和 `grok-register` 三个注册脚本。它把原本偏命令行的执行方式包装成可持久化、可排队、可下载结果、可通过 API 调用的任务系统。
+`MREGISTER` 是一个基于 FastAPI 的控制台，用来统一管理 `openai-register已经废弃删除`、`chatgpt_register_v2` 和 `grok-register` 三个注册脚本。它把原本偏命令行的执行方式包装成可持久化、可排队、可下载结果、可通过 API 调用的任务系统。
 
 本文档只保留中文，并重点说明：
 
@@ -29,8 +29,6 @@
   - 前端静态资源与模板
   - SQLite 运行时数据库
   - Dockerfile
-- `openai-register/`
-  - OpenAI 注册脚本
 - `chatgpt_register_v2/`
   - ChatGPT 注册脚本（支持 GPTMail 适配）
 - `grok-register/`
@@ -85,10 +83,10 @@ http://服务器IP:8000
 
 ## Docker Compose 部署
 
-当前仓库已经带好了 `docker-compose.yml`，默认直接拉取 Docker Hub 镜像：
+当前仓库已经带好了 `docker-compose.yml`，默认直接拉取 仓库：
 
 ```text
-maishanhub/mregister:main
+https://github.com/Maishan-Inc/MREGISTER.git
 ```
 
 ### 1. 拉取镜像
