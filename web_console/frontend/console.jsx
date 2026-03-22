@@ -325,8 +325,10 @@ export function ConsoleApp() {
   const [loadError, setLoadError] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [flashNotice, setFlashNotice] = useState(null);
+  const [taskListMode, setTaskListMode] = useState('task');
   const [taskFilterStatus, setTaskFilterStatus] = useState('all');
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [selectedScheduleId, setSelectedScheduleId] = useState(null);
   const [flashKey, setFlashKey] = useState('');
   const [modalState, setModalState] = useState(null);
   const [statePayload, setStatePayload] = useState({
@@ -388,12 +390,14 @@ export function ConsoleApp() {
     ? statePayload.tasks
     : statePayload.tasks.filter((task) => task.status === taskFilterStatus);
   const visibleTask = filteredTasks.find((item) => item.id === selectedTaskId) || filteredTasks[0] || null;
+  const visibleSchedule = statePayload.schedules.find((item) => item.id === selectedScheduleId) || statePayload.schedules[0] || null;
   const currentPlatformSpec = statePayload.platforms[taskDraft.platform] || {};
   const currentSectionLabel = tr(SECTION_TITLE_KEYS[activeSection] || 'section_overview');
   const topbarBreadcrumbs = [
     tr('topbar_workspace'),
     ...(activeSection === 'dashboard' ? [] : [currentSectionLabel]),
-    ...(activeSection === 'task-detail' && visibleTask ? [getTaskDisplayName(visibleTask)] : []),
+    ...(activeSection === 'task-detail' && taskListMode === 'task' && visibleTask ? [getTaskDisplayName(visibleTask)] : []),
+    ...(activeSection === 'task-detail' && taskListMode === 'schedule' && visibleSchedule ? [`${visibleSchedule.name} ${tr('schedule_tag_suffix')}`] : []),
   ];
   const logoutLabel = tr('nav_logout');
 
@@ -475,6 +479,12 @@ export function ConsoleApp() {
         return current;
       }
       return payload.tasks[0]?.id || null;
+    });
+    setSelectedScheduleId((current) => {
+      if (payload.schedules.some((item) => item.id === current)) {
+        return current;
+      }
+      return payload.schedules[0]?.id || null;
     });
   }
 
@@ -813,6 +823,21 @@ export function ConsoleApp() {
       schedule,
       completedRuns: relatedTasks.filter((item) => item.status === 'completed').length,
       todayTask,
+    };
+  }
+
+  function getScheduleDetail(schedule) {
+    if (!schedule) {
+      return null;
+    }
+    const relatedTasks = statePayload.tasks.filter((item) => Number(item.schedule_id) === Number(schedule.id));
+    const todayTask = relatedTasks.find((item) => String(item.created_at || '').startsWith(getTodayDateKey())) || null;
+    const latestTask = relatedTasks[0] || null;
+    return {
+      relatedTasks,
+      todayTask,
+      latestTask,
+      completedRuns: relatedTasks.filter((item) => item.status === 'completed').length,
     };
   }
 
@@ -1166,6 +1191,7 @@ export function ConsoleApp() {
 
   function renderTaskDetail() {
     const scheduleSummary = visibleTask ? getScheduleTaskSummary(visibleTask) : null;
+    const scheduleDetail = visibleSchedule ? getScheduleDetail(visibleSchedule) : null;
     return (
       <section className="section-card active">
         <p className="subtle task-detail-note content-section-note">{tr('task_detail_note')}</p>
@@ -1178,7 +1204,15 @@ export function ConsoleApp() {
                   <span>{tr('task_list_desc')}</span>
                 </div>
               </div>
-              <div className="task-filter-bar">
+              <div className="task-filter-bar task-filter-grid">
+                <label className="field-card field-card--compact">
+                  <span>{tr('task_list_mode')}</span>
+                  <select value={taskListMode} onChange={(event) => setTaskListMode(event.target.value)}>
+                    <option value="task">{tr('task_list_mode_task')}</option>
+                    <option value="schedule">{tr('task_list_mode_schedule')}</option>
+                  </select>
+                </label>
+                {taskListMode === 'task' ? (
                 <label className="field-card field-card--compact">
                   <span>{tr('task_filter_status')}</span>
                   <select value={taskFilterStatus} onChange={(event) => setTaskFilterStatus(event.target.value)}>
@@ -1187,9 +1221,10 @@ export function ConsoleApp() {
                     ))}
                   </select>
                 </label>
+                ) : null}
               </div>
               <div className="task-side-list">
-                {filteredTasks.length ? filteredTasks.map((task) => (
+                {taskListMode === 'task' ? filteredTasks.length ? filteredTasks.map((task) => (
                   <button key={task.id} type="button" className={`task-side-item ${visibleTask?.id === task.id ? 'selected' : ''}`.trim()} onClick={() => setSelectedTaskId(task.id)}>
                     <div className="task-side-item__top">
                       <strong className="task-side-item__name">{getTaskDisplayName(task)}</strong>
@@ -1200,12 +1235,28 @@ export function ConsoleApp() {
                       <span className={`status-pill status-pill--${task.status}`}>{statusLabel(task.status)}</span>
                     </div>
                   </button>
-                )) : <p className="empty">{tr('empty_filtered_tasks')}</p>}
+                )) : <p className="empty">{tr('empty_filtered_tasks')}</p> : statePayload.schedules.length ? statePayload.schedules.map((schedule) => {
+                  const detail = getScheduleDetail(schedule);
+                  return (
+                    <button key={schedule.id} type="button" className={`task-side-item ${visibleSchedule?.id === schedule.id ? 'selected' : ''}`.trim()} onClick={() => setSelectedScheduleId(schedule.id)}>
+                      <div className="task-side-item__top">
+                        <strong className="task-side-item__name">{schedule.name} {tr('schedule_tag_suffix')}</strong>
+                        <span className="task-side-item__id">#{schedule.id}</span>
+                      </div>
+                      <div className="task-side-item__meta">
+                        <span className="task-side-item__count">{detail?.completedRuns || 0} {tr('schedule_runs_short')}</span>
+                        <span className={`status-pill ${schedule.enabled ? 'status-pill--linked' : 'status-pill--disabled'}`.trim()}>
+                          {schedule.enabled ? tr('enable') : tr('disable')}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                }) : <p className="empty">{tr('empty_schedules')}</p>}
               </div>
             </article>
           </aside>
           <article className="panel task-detail-panel">
-            {visibleTask ? (
+            {taskListMode === 'task' && visibleTask ? (
               <>
                 <div className={`task-detail-header ${scheduleSummary ? 'task-detail-header--split' : ''}`.trim()}>
                   <div className="task-detail-header-main">
@@ -1253,6 +1304,47 @@ export function ConsoleApp() {
                   <pre id="task-console" ref={consoleRef}>{visibleTask.console_tail || tr('console_empty')}</pre>
                 </div>
               </>
+            ) : taskListMode === 'schedule' && visibleSchedule ? (
+              <div className="schedule-detail-layout">
+                <div className="task-detail-header task-detail-header--split">
+                  <div className="task-detail-header-main">
+                    <h3>{visibleSchedule.name} {tr('schedule_tag_suffix')} (#{visibleSchedule.id})</h3>
+                    <p className="meta">
+                      {visibleSchedule.platform} | {tr('field_time_of_day')} {visibleSchedule.time_of_day} | {visibleSchedule.enabled ? tr('enable') : tr('disable')}
+                    </p>
+                  </div>
+                  <aside className="schedule-summary-card">
+                    <strong>{tr('schedule_detail_title')}</strong>
+                    <div className="schedule-summary-list">
+                      <span>{visibleSchedule.platform}</span>
+                      <span>{tr('schedule_target_quantity', { value: visibleSchedule.quantity })}</span>
+                      <span>{tr('schedule_completed_quantity', { value: scheduleDetail?.todayTask?.results_count ?? 0 })}</span>
+                      <span>{tr('schedule_today_status', { value: scheduleDetail?.todayTask ? statusLabel(scheduleDetail.todayTask.status) : tr('schedule_today_none') })}</span>
+                      <span>{tr('schedule_completed_runs', { value: scheduleDetail?.completedRuns ?? 0 })}</span>
+                      <span>{visibleSchedule.use_proxy ? tr('schedule_proxy_on') : tr('schedule_proxy_off')}</span>
+                      <span>{visibleSchedule.auto_import_cpamc ? tr('schedule_cpamc_auto_import_on') : tr('schedule_cpamc_auto_import_off')}</span>
+                    </div>
+                  </aside>
+                </div>
+                <div className="schedule-detail-panels">
+                  <article className="panel compact">
+                    <h3>{tr('schedule_today_detail_title')}</h3>
+                    <p className="meta">
+                      {scheduleDetail?.todayTask
+                        ? `${tr('schedule_target_quantity', { value: scheduleDetail.todayTask.quantity })} | ${tr('schedule_completed_quantity', { value: scheduleDetail.todayTask.results_count })} | ${tr('schedule_today_status', { value: statusLabel(scheduleDetail.todayTask.status) })}`
+                        : tr('schedule_today_none')}
+                    </p>
+                  </article>
+                  <article className="panel compact">
+                    <h3>{tr('schedule_latest_task_title')}</h3>
+                    <p className="meta">
+                      {scheduleDetail?.latestTask
+                        ? `#${scheduleDetail.latestTask.id} | ${statusLabel(scheduleDetail.latestTask.status)} | ${scheduleDetail.latestTask.results_count}/${scheduleDetail.latestTask.quantity}`
+                        : tr('empty_tasks')}
+                    </p>
+                  </article>
+                </div>
+              </div>
             ) : (
               <div className="task-empty">
                 <h3>{tr('task_detail_empty_title')}</h3>
