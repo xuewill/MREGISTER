@@ -323,6 +323,7 @@ export function ConsoleApp() {
   const [busyKeys, setBusyKeys] = useState({});
   const [loadError, setLoadError] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [flashNotice, setFlashNotice] = useState(null);
   const [taskFilterStatus, setTaskFilterStatus] = useState('all');
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [flashKey, setFlashKey] = useState('');
@@ -373,6 +374,7 @@ export function ConsoleApp() {
     linked: false,
     last_error: '',
   });
+  const [cpamcDirty, setCpamcDirty] = useState(false);
   const [apiKeyName, setApiKeyName] = useState('');
   const modalResolverRef = useRef(null);
   const consoleRef = useRef(null);
@@ -421,6 +423,14 @@ export function ConsoleApp() {
   }, [visibleTask?.id, visibleTask?.console_tail]);
 
   useEffect(() => {
+    if (!flashNotice) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setFlashNotice(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [flashNotice]);
+
+  useEffect(() => {
     refreshState({ initial: true }).catch((error) => {
       setLoadError(error.message);
       setLoaded(true);
@@ -442,13 +452,15 @@ export function ConsoleApp() {
       default_yescaptcha_credential_id: payload.defaults.default_yescaptcha_credential_id ? String(payload.defaults.default_yescaptcha_credential_id) : '',
       default_proxy_id: payload.defaults.default_proxy_id ? String(payload.defaults.default_proxy_id) : '',
     });
-    setCpamcDraft({
-      enabled: Boolean(payload.cpamc?.enabled),
-      base_url: payload.cpamc?.base_url || '',
-      management_key: payload.cpamc?.management_key || '',
-      linked: Boolean(payload.cpamc?.linked),
-      last_error: payload.cpamc?.last_error || '',
-    });
+    if (initial || !cpamcDirty) {
+      setCpamcDraft({
+        enabled: Boolean(payload.cpamc?.enabled),
+        base_url: payload.cpamc?.base_url || '',
+        management_key: payload.cpamc?.management_key || '',
+        linked: Boolean(payload.cpamc?.linked),
+        last_error: payload.cpamc?.last_error || '',
+      });
+    }
     setTaskDraft((current) => normalizeTaskDraft(initial ? initialTaskDraft(payload.platforms) : current, payload.platforms, payload.credentials, payload.proxies));
     setScheduleDraft((current) => {
       const platform = payload.platforms[current.platform] ? current.platform : (getPlatformKeys(payload.platforms)[0] || 'chatgpt-register-v2');
@@ -631,6 +643,7 @@ export function ConsoleApp() {
             management_key: cpamcDraft.management_key,
           }),
         });
+        setCpamcDirty(false);
         await refreshState();
       } catch (error) {
         setLoadError(error.message);
@@ -649,10 +662,15 @@ export function ConsoleApp() {
             management_key: cpamcDraft.management_key,
           }),
         });
+        setCpamcDirty(false);
+        await refreshState();
       } catch (error) {
         setLoadError(error.message);
-      } finally {
-        await refreshState().catch(() => {});
+        setCpamcDraft((current) => ({
+          ...current,
+          linked: false,
+          last_error: error.message,
+        }));
       }
     });
   }
@@ -752,9 +770,15 @@ export function ConsoleApp() {
       try {
         const result = await api(`/api/tasks/${task.id}/cpamc-import`, { method: 'POST' });
         if (result.failed_count) {
-          window.alert(tr('cpamc_import_partial', { success: result.imported_count, failed: result.failed_count }));
+          setFlashNotice({
+            type: 'warn',
+            message: tr('cpamc_import_partial', { success: result.imported_count, failed: result.failed_count }),
+          });
         } else {
-          window.alert(tr('cpamc_import_success', { count: result.imported_count }));
+          setFlashNotice({
+            type: 'success',
+            message: tr('cpamc_import_success', { count: result.imported_count }),
+          });
         }
         await refreshState();
       } catch (error) {
@@ -1276,6 +1300,9 @@ export function ConsoleApp() {
     const cpamcStatus = cpamcDraft.enabled
       ? (cpamcDraft.linked ? tr('cpamc_status_linked') : tr('cpamc_status_unlinked'))
       : tr('cpamc_status_disabled');
+    const cpamcStatusClass = cpamcDraft.enabled
+      ? (cpamcDraft.linked ? 'status-pill--completed' : 'status-pill--queued')
+      : 'status-pill--disabled';
     return (
       <section className="section-card active">
         <article className="panel">
@@ -1284,34 +1311,42 @@ export function ConsoleApp() {
               <h3>{tr('cpamc_title')}</h3>
               <span>{tr('cpamc_desc')}</span>
             </div>
-            <span className={`status-pill ${cpamcDraft.linked ? 'status-pill--completed' : 'status-pill--queued'}`.trim()}>{cpamcStatus}</span>
+            <div className="cpamc-head-actions">
+              <label className="cpamc-toggle">
+                <input
+                  type="checkbox"
+                  checked={cpamcDraft.enabled}
+                  onChange={(event) => {
+                    setCpamcDirty(true);
+                    setCpamcDraft((current) => ({
+                      ...current,
+                      enabled: event.target.checked,
+                      linked: false,
+                      last_error: '',
+                    }));
+                  }}
+                />
+                <span>{tr('field_cpamc_enabled')}</span>
+              </label>
+              <span className={`status-pill ${cpamcStatusClass}`.trim()}>{cpamcStatus}</span>
+            </div>
           </div>
           <form className="stack" onSubmit={handleCpamcSave}>
-            <label className="checkbox-row field-card field-card--checkbox">
-              <input
-                type="checkbox"
-                checked={cpamcDraft.enabled}
-                onChange={(event) => setCpamcDraft((current) => ({
-                  ...current,
-                  enabled: event.target.checked,
-                  linked: false,
-                  last_error: '',
-                }))}
-              />
-              <span>{tr('field_cpamc_enabled')}</span>
-            </label>
             <label className="field-card">
               <span>{tr('field_cpamc_base_url')}</span>
               <input
                 required={cpamcDraft.enabled}
                 value={cpamcDraft.base_url}
                 placeholder={tr('field_cpamc_base_url_placeholder')}
-                onChange={(event) => setCpamcDraft((current) => ({
-                  ...current,
-                  base_url: event.target.value,
-                  linked: false,
-                  last_error: '',
-                }))}
+                onChange={(event) => {
+                  setCpamcDirty(true);
+                  setCpamcDraft((current) => ({
+                    ...current,
+                    base_url: event.target.value,
+                    linked: false,
+                    last_error: '',
+                  }));
+                }}
               />
             </label>
             <label className="field-card">
@@ -1321,12 +1356,15 @@ export function ConsoleApp() {
                 required={cpamcDraft.enabled}
                 value={cpamcDraft.management_key}
                 placeholder={tr('field_cpamc_management_key_placeholder')}
-                onChange={(event) => setCpamcDraft((current) => ({
-                  ...current,
-                  management_key: event.target.value,
-                  linked: false,
-                  last_error: '',
-                }))}
+                onChange={(event) => {
+                  setCpamcDirty(true);
+                  setCpamcDraft((current) => ({
+                    ...current,
+                    management_key: event.target.value,
+                    linked: false,
+                    last_error: '',
+                  }));
+                }}
               />
             </label>
             {cpamcDraft.last_error ? <p className="field-tip">{tr('cpamc_last_error', { value: cpamcDraft.last_error })}</p> : null}
@@ -1765,6 +1803,7 @@ Authorization: Bearer YOUR_API_KEY`,
               <GithubIcon />
             </a>
           </div>
+          {flashNotice && loaded ? <div className={`toast-banner toast-banner--${flashNotice.type}`.trim()}>{flashNotice.message}</div> : null}
           {loadError && loaded ? <div className="toast-error">{loadError}</div> : null}
           {!loaded ? <section className="section-card active"><div className="panel"><p className="empty">Loading...</p></div></section> : renderContent()}
         </main>

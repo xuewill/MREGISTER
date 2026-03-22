@@ -110,12 +110,14 @@ button, input, select, textarea { font: inherit; }
 }
 
 .sidebar-top {
+  min-height: 46px;
   gap: 12px;
   justify-content: center;
 }
 
 .sidebar-brand {
   min-width: 0;
+  min-height: 46px;
   width: 100%;
   gap: 14px;
   overflow: hidden;
@@ -123,13 +125,14 @@ button, input, select, textarea { font: inherit; }
 }
 
 .brand-logo-wrap {
-  width: 46px;
-  height: 46px;
-  padding: 6px;
-  border-radius: 16px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 3px;
+  border-radius: 12px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 16px 28px rgba(40, 30, 10, 0.1);
+  box-shadow: 0 10px 18px rgba(40, 30, 10, 0.08);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -484,6 +487,13 @@ button, input, select, textarea { font: inherit; }
 .status-pill--completed {
   border-color: rgba(18, 108, 82, 0.22);
   background: linear-gradient(180deg, rgba(18, 108, 82, 0.14), rgba(18, 108, 82, 0.2));
+  color: var(--accent-strong);
+}
+
+.status-pill--disabled {
+  border-color: rgba(111, 104, 88, 0.18);
+  background: linear-gradient(180deg, rgba(111, 104, 88, 0.08), rgba(111, 104, 88, 0.12));
+  color: var(--muted);
 }
 
 .task-side-item.selected .task-side-item__name,
@@ -551,6 +561,32 @@ label span { font-size: 13px; color: var(--muted); }
 
 .field-card--compact { padding: 10px 12px; }
 .field-card--checkbox { grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
+
+.cpamc-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cpamc-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.cpamc-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.cpamc-toggle span {
+  font-size: 13px;
+  color: var(--muted);
+}
 
 input, select, textarea {
   width: 100%;
@@ -923,7 +959,19 @@ pre {
 
 .modal-actions { justify-content: flex-end; margin-top: 24px; }
 .sidebar-overlay { display: none; }
+.toast-banner,
 .toast-error { margin-bottom: 12px; padding: 14px 16px; border-radius: 16px; background: rgba(157, 44, 44, 0.12); color: var(--danger); border: 1px solid rgba(157, 44, 44, 0.18); }
+.toast-banner--success {
+  background: rgba(18, 108, 82, 0.12);
+  color: var(--accent-strong);
+  border-color: rgba(18, 108, 82, 0.18);
+}
+
+.toast-banner--warn {
+  background: rgba(180, 130, 16, 0.12);
+  color: #8b5b00;
+  border-color: rgba(180, 130, 16, 0.2);
+}
 .empty { padding: 8px 0; }
 
 @keyframes spin {
