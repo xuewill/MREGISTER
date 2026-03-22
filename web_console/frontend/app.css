@@ -111,13 +111,15 @@ button, input, select, textarea { font: inherit; }
 
 .sidebar-top {
   gap: 12px;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .sidebar-brand {
   min-width: 0;
+  width: 100%;
   gap: 14px;
   overflow: hidden;
+  justify-content: center;
 }
 
 .brand-logo-wrap {

@@ -25,6 +25,7 @@ const SECTION_TITLE_KEYS = {
   'create-task': 'section_tasks',
   'task-detail': 'section_task_detail',
   schedules: 'section_schedules',
+  cpamc: 'cpamc_title',
   'api-keys': 'section_api',
   docs: 'section_docs',
 };
@@ -80,6 +81,12 @@ function SidebarIcon({ name }) {
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M7 2v3M17 2v3M4 7h16v13H4zM8 11h3v3H8zM13 11h3v3h-3zM8 16h3v1H8zM13 16h3v1h-3z" />
+        </svg>
+      );
+    case 'cpamc':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M5 7h14M5 12h14M5 17h14M8 4v16M16 4v16" />
         </svg>
       );
     case 'api-keys':
@@ -1192,9 +1199,6 @@ export function ConsoleApp() {
   }
 
   function renderSchedules() {
-    const cpamcStatus = cpamcDraft.enabled
-      ? (cpamcDraft.linked ? tr('cpamc_status_linked') : tr('cpamc_status_unlinked'))
-      : tr('cpamc_status_disabled');
     return (
       <section className="section-card active">
         <div className="grid-two">
@@ -1264,6 +1268,16 @@ export function ConsoleApp() {
             </div>
           </article>
         </div>
+      </section>
+    );
+  }
+
+  function renderCpamc() {
+    const cpamcStatus = cpamcDraft.enabled
+      ? (cpamcDraft.linked ? tr('cpamc_status_linked') : tr('cpamc_status_unlinked'))
+      : tr('cpamc_status_disabled');
+    return (
+      <section className="section-card active">
         <article className="panel">
           <div className="panel-head">
             <div>
@@ -1655,6 +1669,8 @@ Authorization: Bearer YOUR_API_KEY`,
         return renderTaskDetail();
       case 'schedules':
         return renderSchedules();
+      case 'cpamc':
+        return renderCpamc();
       case 'api-keys':
         return renderApiKeys();
       case 'docs':

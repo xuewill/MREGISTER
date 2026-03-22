@@ -8,6 +8,7 @@ export const NAV_ITEMS = [
   ['create-task', 'nav_create_task'],
   ['task-detail', 'nav_task_detail'],
   ['schedules', 'nav_schedules'],
+  ['cpamc', 'cpamc_title'],
   ['api-keys', 'nav_api_keys'],
   ['docs', 'nav_docs'],
 ];
