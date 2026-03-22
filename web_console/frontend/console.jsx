@@ -17,6 +17,7 @@ import {
 import { BusyButton, Modal } from './ui.jsx';
 
 const SIDEBAR_LOGO_SRC = '/static/MAISHANhlogomini.png';
+const DOCS_LOG_IMAGE_SRC = '/static/docs-log-preview.jpg';
 const PROJECT_GITHUB_URL = 'https://github.com/Maishan-Inc/MREGISTER';
 const SECTION_TITLE_KEYS = {
   dashboard: 'section_overview',
@@ -769,18 +770,14 @@ export function ConsoleApp() {
     await withBusy(`cpamc-import-${task.id}`, async () => {
       try {
         const result = await api(`/api/tasks/${task.id}/cpamc-import`, { method: 'POST' });
-        if (result.failed_count) {
-          setFlashNotice({
-            type: 'warn',
-            message: tr('cpamc_import_partial', { success: result.imported_count, failed: result.failed_count }),
-          });
-        } else {
-          setFlashNotice({
-            type: 'success',
-            message: tr('cpamc_import_success', { count: result.imported_count }),
-          });
-        }
         await refreshState();
+        await openModal({
+          title: tr('cpamc_import_result_title'),
+          message: result.failed_count
+            ? tr('cpamc_import_partial', { success: result.imported_count, failed: result.failed_count })
+            : tr('cpamc_import_success', { count: result.imported_count }),
+          confirmLabel: tr('modal_close'),
+        });
       } catch (error) {
         setLoadError(error.message);
       }
@@ -1301,7 +1298,7 @@ export function ConsoleApp() {
       ? (cpamcDraft.linked ? tr('cpamc_status_linked') : tr('cpamc_status_unlinked'))
       : tr('cpamc_status_disabled');
     const cpamcStatusClass = cpamcDraft.enabled
-      ? (cpamcDraft.linked ? 'status-pill--completed' : 'status-pill--queued')
+      ? (cpamcDraft.linked ? 'status-pill--linked' : 'status-pill--queued')
       : 'status-pill--disabled';
     return (
       <section className="section-card active">
@@ -1312,7 +1309,7 @@ export function ConsoleApp() {
               <span>{tr('cpamc_desc')}</span>
             </div>
             <div className="cpamc-head-actions">
-              <label className="cpamc-toggle">
+              <label className={`cpamc-switch ${cpamcDraft.enabled ? 'is-enabled' : ''}`.trim()}>
                 <input
                   type="checkbox"
                   checked={cpamcDraft.enabled}
@@ -1326,7 +1323,10 @@ export function ConsoleApp() {
                     }));
                   }}
                 />
-                <span>{tr('field_cpamc_enabled')}</span>
+                <span className="cpamc-switch-track" aria-hidden="true">
+                  <span className="cpamc-switch-thumb" />
+                </span>
+                <span className="cpamc-switch-label">{tr('field_cpamc_enabled')}</span>
               </label>
               <span className={`status-pill ${cpamcStatusClass}`.trim()}>{cpamcStatus}</span>
             </div>
@@ -1573,6 +1573,25 @@ Authorization: Bearer YOUR_API_KEY`,
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -o result.zip`,
     };
+    const feature = isZh ? {
+      title: '新增功能：日志',
+      text: 'MREGISTER 现在把任务日志放到更直观的位置。创建任务后可以直接进入任务详情，持续查看脚本启动、运行、报错和收尾输出，不需要回到命令行窗口手动追踪。',
+      items: [
+        '支持实时查看当前任务输出。',
+        '任务结束后仍可回看已保存的历史日志。',
+        '更适合排查导入失败、凭据异常、网络问题和脚本执行中断。',
+      ],
+      imageAlt: 'MREGISTER 日志功能预览',
+    } : {
+      title: 'New Feature: Logs',
+      text: 'MREGISTER now exposes task logs in a clearer workflow. After creating a task, you can open Task Detail to follow startup output, runtime progress, errors, and final export messages without tailing the CLI manually.',
+      items: [
+        'Inspect live task output in real time.',
+        'Review persisted logs after the task finishes.',
+        'Useful for diagnosing import failures, credential issues, network problems, and interrupted runs.',
+      ],
+      imageAlt: 'MREGISTER log feature preview',
+    };
 
     return (
       <section className="section-card active">
@@ -1580,6 +1599,19 @@ Authorization: Bearer YOUR_API_KEY`,
           <section className="docs-hero">
             <h3>{docs.heroTitle}</h3>
             <p>{docs.heroText}</p>
+          </section>
+
+          <section className="doc-card doc-feature">
+            <div>
+              <h3>{feature.title}</h3>
+              <p>{feature.text}</p>
+              <ul className="doc-note-list">
+                {feature.items.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
+            <div className="doc-media-frame">
+              <img className="doc-media" src={DOCS_LOG_IMAGE_SRC} alt={feature.imageAlt} />
+            </div>
           </section>
 
           <section className="doc-card">
@@ -1813,7 +1845,7 @@ Authorization: Bearer YOUR_API_KEY`,
         title={modalState?.title || ''}
         message={modalState?.message || ''}
         confirmLabel={modalState?.confirmLabel || tr('created_task_modal_confirm')}
-        cancelLabel={modalState?.cancelLabel || tr('created_task_modal_cancel')}
+        cancelLabel={modalState?.cancelLabel}
         onConfirm={() => closeModal(true)}
         onCancel={() => closeModal(false)}
       />

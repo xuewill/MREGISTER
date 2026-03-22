@@ -2,6 +2,13 @@
 
 `MREGISTER` 是一个基于 FastAPI 的控制台，用来统一管理 `openai-register已经废弃删除`、`chatgpt_register_v2` 和 `grok-register` 三个注册脚本。它把原本偏命令行的执行方式包装成可持久化、可排队、可下载结果、可通过 API 调用的任务系统。
 
+新增功能：
+
+- 一键导入：一键导入到CPAMC 可以设置 任务完成自动导入到CPAMC 
+
+
+![MREGISTER ](img/IMG.jpg)
+
 本文档只保留中文，并重点说明：
 
 - 如何部署
